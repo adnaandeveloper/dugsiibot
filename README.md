@@ -1,21 +1,5 @@
-# Telegram Undervisnings-CRM Bot
+# Telegram Undervisnings-CRM v2
 
-MVP til kunder, lektioner og månedsafregning.
+Understøtter timepris (250/200 kr) og fast månedspris.
 
-## Deploy på Railway (dit Hobby workspace)
-1. New Project → Add Database → PostgreSQL
-2. Deploy fra GitHub eller upload disse filer
-3. Sæt Environment Variables:
-   - TELEGRAM_BOT_TOKEN
-4. Railway tilføjer DATABASE_URL automatisk
-5. Deploy
-
-## Funktioner
-- /start med knapper
-- Tilføj kunde
-- Ny lektion (beløb + note)
-- Månedsafslutning summerer og markerer betalt/skylder
-
-
-## Docker
-Railway detekterer Dockerfile automatisk. Ingen ekstra config nødvendig.
+Deploy: push til GitHub, Railway bygger automatisk. Database migreres automatisk.
