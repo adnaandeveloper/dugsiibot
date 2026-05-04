@@ -45,18 +45,33 @@ async def add_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = update.message.text
     context.user_data["phone"] = None if phone == "-" else phone
     keyboard = [[InlineKeyboardButton("Timepris", callback_data="type_hourly"), InlineKeyboardButton("Fast måned", callback_data="type_monthly")]]
-    await update.message.reply_text("Betalingstype?", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text("Betalingstype? (tryk på knap, eller skriv 'time' / 'fast')", reply_markup=InlineKeyboardMarkup(keyboard))
     return ADD_PRICING
 
 async def add_pricing(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    ptype = "hourly" if "hourly" in query.data else "monthly"
+    # håndter både knap og tekst
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        data = query.data
+        msg = query.message
+    else:
+        data = update.message.text.lower()
+        msg = update.message
+        if "time" in data:
+            data = "type_hourly"
+        elif "fast" in data or "måned" in data:
+            data = "type_monthly"
+        else:
+            await msg.reply_text("Tryk på knappen, eller skriv 'time' eller 'fast'")
+            return ADD_PRICING
+
+    ptype = "hourly" if "hourly" in data else "monthly"
     context.user_data["pricing_type"] = ptype
     if ptype == "hourly":
-        await query.message.reply_text("Timepris i kr (fx 250 eller 200):")
+        await msg.reply_text("Timepris i kr (fx 250 eller 200):")
     else:
-        await query.message.reply_text("Fast pris pr. måned i kr (fx 800):")
+        await msg.reply_text("Fast pris pr. måned i kr (fx 800):")
     return ADD_RATE
 
 async def add_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -68,7 +83,7 @@ async def add_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     hourly = rate if ptype == "hourly" else 0
     monthly = rate if ptype == "monthly" else 0
     with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("INSERT INTO customers (name, phone, pricing_type, hourly_rate, monthly_price) VALUES (%s,%s,%s)",
+        cur.execute("INSERT INTO customers (name, phone, pricing_type, hourly_rate, monthly_price) VALUES (%s,%s,%s,%s,%s)",
                     (context.user_data["name"], context.user_data["phone"], ptype, hourly, monthly))
         conn.commit()
     await update.message.reply_text(f"Kunde {context.user_data['name']} oprettet som {ptype} ✅")
@@ -189,7 +204,10 @@ def main():
         states={
             ADD_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_name)],
             ADD_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_phone)],
-            ADD_PRICING: [CallbackQueryHandler(add_pricing, pattern="^type_")],
+            ADD_PRICING: [
+                CallbackQueryHandler(add_pricing, pattern="^type_"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, add_pricing)
+            ],
             ADD_RATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_rate)]
         },
         fallbacks=[CommandHandler("cancel", cancel)],
