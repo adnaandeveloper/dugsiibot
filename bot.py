@@ -49,7 +49,6 @@ async def add_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ADD_PRICING
 
 async def add_pricing(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # håndter både knap og tekst
     if update.callback_query:
         query = update.callback_query
         await query.answer()
@@ -83,7 +82,7 @@ async def add_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     hourly = rate if ptype == "hourly" else 0
     monthly = rate if ptype == "monthly" else 0
     with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("INSERT INTO customers (name, phone, pricing_type, hourly_rate, monthly_price) VALUES (%s,%s,%s,%s,%s)",
+        cur.execute("INSERT INTO customers (name, phone, pricing_type, hourly_rate, monthly_price) VALUES (%s,%s,%s)",
                     (context.user_data["name"], context.user_data["phone"], ptype, hourly, monthly))
         conn.commit()
     await update.message.reply_text(f"Kunde {context.user_data['name']} oprettet som {ptype} ✅")
@@ -199,6 +198,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     init_db()
     app = Application.builder().token(TOKEN).build()
+
     conv_add = ConversationHandler(
         entry_points=[CallbackQueryHandler(add_customer_start, pattern="^add_customer$")],
         states={
@@ -211,21 +211,31 @@ def main():
             ADD_RATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_rate)]
         },
         fallbacks=[CommandHandler("cancel", cancel)],
+        allow_reentry=True,
+        per_message=False
     )
+
     conv_lesson = ConversationHandler(
         entry_points=[CallbackQueryHandler(new_lesson_start, pattern="^new_lesson$")],
         states={
-            LESSON_HOURS: [CallbackQueryHandler(lesson_choose, pattern="^lesson_"), MessageHandler(filters.TEXT & ~filters.COMMAND, lesson_hours)],
+            LESSON_HOURS: [
+                CallbackQueryHandler(lesson_choose, pattern="^lesson_"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, lesson_hours)
+            ],
             LESSON_NOTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, lesson_note)]
         },
         fallbacks=[CommandHandler("cancel", cancel)],
+        allow_reentry=True,
+        per_message=False
     )
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(conv_add)
     app.add_handler(conv_lesson)
     app.add_handler(CallbackQueryHandler(list_customers, pattern="^list_customers$"))
     app.add_handler(CallbackQueryHandler(month_close, pattern="^month_close$"))
     app.add_handler(CallbackQueryHandler(handle_payment, pattern="^(pay|owe)_"))
+
     logging.info("Bot kører...")
     app.run_polling()
 
