@@ -1,4 +1,5 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+import datetime
 
 def main_menu():
     return InlineKeyboardMarkup([
@@ -13,27 +14,29 @@ def back_button(target="back_main"):
 
 def hours_keyboard(customer_id: int, rate: int):
     return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(f"0.5t ({int(rate*0.5)} kr)", callback_data=f"lh_{customer_id}_0.5"),
-            InlineKeyboardButton(f"1t ({rate} kr)", callback_data=f"lh_{customer_id}_1")
-        ],
-        [
-            InlineKeyboardButton(f"1.5t ({int(rate*1.5)} kr)", callback_data=f"lh_{customer_id}_1.5"),
-            InlineKeyboardButton(f"2t ({rate*2} kr)", callback_data=f"lh_{customer_id}_2")
-        ],
+        [InlineKeyboardButton(f"0.5t ({int(rate*0.5)} kr)", callback_data=f"lh_{customer_id}_0.5"),
+         InlineKeyboardButton(f"1t ({rate} kr)", callback_data=f"lh_{customer_id}_1")],
+        [InlineKeyboardButton(f"1.5t ({int(rate*1.5)} kr)", callback_data=f"lh_{customer_id}_1.5"),
+         InlineKeyboardButton(f"2t ({rate*2} kr)", callback_data=f"lh_{customer_id}_2")],
         [InlineKeyboardButton("⬅️", callback_data="new_lesson")]
     ])
 
-def customer_detail_keyboard(customer_id: int):
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✏️ Rediger pris", callback_data=f"edit_{customer_id}"),
-         InlineKeyboardButton("💰 Marker betalt", callback_data=f"pay_{customer_id}")],
-        [InlineKeyboardButton("🗑 Slet kunde", callback_data=f"del_{customer_id}")],
-        [InlineKeyboardButton("⬅️ Tilbage", callback_data="list_customers")]
-    ])
+def customer_detail_keyboard(customer_id: int, months):
+    # months = liste af (ym, net)
+    btns = []
+    for ym, net in months:
+        dt = datetime.datetime.strptime(ym, "%Y-%m")
+        navn = dt.strftime("%b %Y") # fx May 2026
+        btns.append([InlineKeyboardButton(f"{navn}: {net} kr", callback_data=f"month_{customer_id}_{ym}")])
+    btns.append([InlineKeyboardButton("✏️ Rediger pris", callback_data=f"edit_{customer_id}"),
+                 InlineKeyboardButton("🗑 Slet kunde", callback_data=f"del_{customer_id}")])
+    btns.append([InlineKeyboardButton("⬅️ Tilbage", callback_data="list_customers")])
+    return InlineKeyboardMarkup(btns)
 
-def confirm_delete_keyboard(customer_id: int):
+def month_detail_keyboard(customer_id: int, ym: str):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Ja, slet", callback_data=f"del_yes_{customer_id}"),
-         InlineKeyboardButton("❌ Annuller", callback_data=f"cust_{customer_id}")]
+        [InlineKeyboardButton("💰 Betal fuldt", callback_data=f"payfull_{customer_id}_{ym}"),
+         InlineKeyboardButton("✏️ Delbetaling", callback_data=f"paypart_{customer_id}_{ym}")],
+        [InlineKeyboardButton("🏷 Rabat", callback_data=f"rabat_{customer_id}_{ym}")],
+        [InlineKeyboardButton("⬅️ Tilbage", callback_data=f"cust_{customer_id}")]
     ])

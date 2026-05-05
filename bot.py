@@ -1,6 +1,6 @@
 import logging
 from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 
 from config import TOKEN, ALLOWED_USERS
 from db import init_db
@@ -50,7 +50,13 @@ def main():
     app.add_handler(CallbackQueryHandler(lessons.quick_hour, pattern="^lh_"))
     app.add_handler(CallbackQueryHandler(lessons.month_close, pattern="^month_close$"))
 
-    # NY: log fejl pænt
+    # NYE: måneds-visning og betalinger
+    app.add_handler(CallbackQueryHandler(customers.month_detail, pattern="^month_"))
+    app.add_handler(CallbackQueryHandler(customers.pay_full, pattern="^payfull_"))
+    app.add_handler(CallbackQueryHandler(customers.pay_part_start, pattern="^paypart_"))
+    app.add_handler(CallbackQueryHandler(customers.pay_part_start, pattern="^rabat_"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, customers.pay_part_save))
+
     app.add_error_handler(error_handler)
 
     logging.info("Bot v3 kører...")
