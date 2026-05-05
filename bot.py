@@ -4,7 +4,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler
 
 from config import TOKEN, ALLOWED_USERS
 from db import init_db
-from keyboards import main_menu, back_button
+from keyboards import main_menu
 from handlers import customers, lessons
 
 logging.basicConfig(
@@ -19,7 +19,8 @@ async def restricted(update: Update):
     return True
 
 async def start(update: Update, context):
-    if not await restricted(update): return
+    if not await restricted(update):
+        return
     await update.message.reply_text("DarulQuranBot v3", reply_markup=main_menu())
 
 async def back_main(update: Update, context):
