@@ -7,10 +7,7 @@ from db import init_db
 from keyboards import main_menu
 from handlers import customers, lessons
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 async def restricted(update: Update):
     if update.effective_user.id not in ALLOWED_USERS:
@@ -19,8 +16,7 @@ async def restricted(update: Update):
     return True
 
 async def start(update: Update, context):
-    if not await restricted(update):
-        return
+    if not await restricted(update): return
     await update.message.reply_text("DarulQuranBot v3", reply_markup=main_menu())
 
 async def back_main(update: Update, context):
@@ -43,25 +39,24 @@ def main():
     app.add_handler(CallbackQueryHandler(customers.list_customers, pattern="^list_customers$"))
     app.add_handler(CallbackQueryHandler(customers.show_customer, pattern="^cust_"))
     app.add_handler(CallbackQueryHandler(customers.delete_customer, pattern="^del_"))
+    app.add_handler(CallbackQueryHandler(customers.reset_customer, pattern="^reset_\\d+$"))
+    app.add_handler(CallbackQueryHandler(customers.reset_all, pattern="^reset_all$"))
+    app.add_handler(CallbackQueryHandler(customers.status_month, pattern="^status_month$"))
+
+    # Betalinger
+    app.add_handler(CallbackQueryHandler(customers.month_detail, pattern="^month_"))
+    app.add_handler(CallbackQueryHandler(customers.pay_full, pattern="^payfull_"))
+    app.add_handler(CallbackQueryHandler(customers.pay_part_start, pattern="^paypart_"))
+    app.add_handler(CallbackQueryHandler(customers.pay_part_start, pattern="^rabat_"))
+    app.add_handler(CallbackQueryHandler(customers.save_payment_method, pattern="^met_"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, customers.pay_part_save))
 
     # Lektioner
     app.add_handler(CallbackQueryHandler(lessons.new_lesson_start, pattern="^new_lesson$"))
     app.add_handler(CallbackQueryHandler(lessons.choose_customer, pattern="^lc_"))
     app.add_handler(CallbackQueryHandler(lessons.quick_hour, pattern="^lh_"))
-    app.add_handler(CallbackQueryHandler(customers.reset_customer, pattern="^reset_\\d+$"))
-    app.add_handler(CallbackQueryHandler(customers.reset_all, pattern="^reset_all$"))
-  
-
-
-    # NYE: måneds-visning og betalinger
-    app.add_handler(CallbackQueryHandler(customers.month_detail, pattern="^month_"))
-    app.add_handler(CallbackQueryHandler(customers.pay_full, pattern="^payfull_"))
-    app.add_handler(CallbackQueryHandler(customers.pay_part_start, pattern="^paypart_"))
-    app.add_handler(CallbackQueryHandler(customers.pay_part_start, pattern="^rabat_"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, customers.pay_part_save))
 
     app.add_error_handler(error_handler)
-
     logging.info("Bot v3 kører...")
     app.run_polling()
 

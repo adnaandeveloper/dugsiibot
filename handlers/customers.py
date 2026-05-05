@@ -1,7 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, CallbackQueryHandler, filters
 from db import get_conn
-from keyboards import back_button, customer_detail_keyboard, month_detail_keyboard
+from keyboards import back_button, customer_detail_keyboard, month_detail_keyboard, betalingsmetode_keyboard
 import datetime
 
 ADD_NAME, ADD_PRICE = range(2)
@@ -108,11 +108,9 @@ async def pay_full(update: Update, context: ContextTypes.DEFAULT_TYPE):
             charged = cur.fetchone()['coalesce']
             cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE customer_id=%s AND to_char(paid_at,'YYYY-MM')=%s", (cid, ym))
             paid = cur.fetchone()['coalesce']
-            rest = charged - paid
-            if rest > 0:
-                cur.execute("INSERT INTO payments (customer_id, amount, paid_at) VALUES (%s,%s,%s)", (cid, rest, f"{ym}-28"))
-        conn.commit()
-    await q.message.edit_text(f"✅ {int(rest)} kr registreret for {ym}", reply_markup=month_detail_keyboard(cid, ym))
+            rest = int(charged - paid)
+    await q.message.edit_text(f"Rest {rest} kr – vælg betaling:", 
+                              reply_markup=betalingsmetode_keyboard("full", cid, ym, rest))
 
 async def pay_part_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -123,19 +121,25 @@ async def pay_part_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def pay_part_save(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = context.user_data.get("pay")
-    if not data:
-        return
-    try:
-        belob = int(update.message.text)
+    if not data: return
+    try: belob = int(update.message.text)
     except:
-        await update.message.reply_text("Kun tal")
-        return
+        await update.message.reply_text("Kun tal"); return
+    await update.message.reply_text(f"{belob} kr – vælg betaling:",
+        reply_markup=betalingsmetode_keyboard("part", data["cid"], data["ym"], belob))
+
+async def save_payment_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    _, action, cid, ym, belob, method = q.data.split("_")
+    cid, belob = int(cid), int(belob)
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("INSERT INTO payments (customer_id, amount, paid_at) VALUES (%s,%s,%s)",
-                        (data["cid"], belob, f"{data['ym']}-28"))
+            cur.execute("INSERT INTO payments (customer_id, amount, paid_at, method) VALUES (%s,%s,%s,%s)",
+                        (cid, belob, f"{ym}-28", method))
         conn.commit()
-    await update.message.reply_text(f"{belob} kr registreret", reply_markup=month_detail_keyboard(data["cid"], data["ym"]))
+    await q.message.edit_text(f"✅ {belob} kr ({method}) registreret for {ym}",
+                              reply_markup=month_detail_keyboard(cid, ym))
 
 async def delete_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -159,7 +163,7 @@ async def reset_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             paid = cur.fetchone()['coalesce']
             saldo = charged - paid
             if saldo!= 0:
-                cur.execute("INSERT INTO payments (customer_id, amount, paid_at) VALUES (%s,%s,now())", (cid, saldo))
+                cur.execute("INSERT INTO payments (customer_id, amount, paid_at, method) VALUES (%s,%s,now(),'kontant')", (cid, saldo))
         conn.commit()
     await q.message.edit_text(f"✅ Saldo nulstillet ({int(saldo)} kr udlignet)", reply_markup=back_button(f"cust_{cid}"))
 
@@ -177,6 +181,31 @@ async def reset_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 paid = cur.fetchone()['coalesce']
                 saldo = charged - paid
                 if saldo!= 0:
-                    cur.execute("INSERT INTO payments (customer_id, amount, paid_at) VALUES (%s,%s,now())", (cid, saldo))
+                    cur.execute("INSERT INTO payments (customer_id, amount, paid_at, method) VALUES (%s,%s,now(),'kontant')", (cid, saldo))
         conn.commit()
     await q.message.edit_text("✅ Alle saldi nulstillet", reply_markup=back_button("back_main"))
+
+async def status_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    now = datetime.datetime.now()
+    this_ym = now.strftime("%Y-%m")
+    last_ym = (now.replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE to_char(paid_at,'YYYY-MM')=%s AND method='kontant'", (this_ym,))
+            kontant = cur.fetchone()['coalesce']
+            cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE to_char(paid_at,'YYYY-MM')=%s AND method='bank'", (this_ym,))
+            bank = cur.fetchone()['coalesce']
+            cur.execute("SELECT COALESCE(SUM(amount),0) FROM lessons WHERE to_char(created_at,'YYYY-MM')=%s", (this_ym,))
+            fakt_this = cur.fetchone()['coalesce']
+            cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE to_char(paid_at,'YYYY-MM')=%s", (this_ym,))
+            paid_this = cur.fetchone()['coalesce']
+            kommende = fakt_this - paid_this
+            cur.execute("SELECT COALESCE(SUM(amount),0) FROM lessons WHERE to_char(created_at,'YYYY-MM')=%s", (last_ym,))
+            fakt_last = cur.fetchone()['coalesce']
+            cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE to_char(paid_at,'YYYY-MM')=%s", (last_ym,))
+            paid_last = cur.fetchone()['coalesce']
+            rest_last = fakt_last - paid_last
+    text = f"📊 Status {this_ym}\n\n💵 Kontant: {int(kontant)} kr\n🏦 Bank: {int(bank)} kr\n✅ Total betalt: {int(kontant+bank)} kr\n\n⏳ Kommende denne måned: {int(kommende)} kr\n📅 Rest fra {last_ym}: {int(rest_last)} kr"
+    await q.message.edit_text(text, reply_markup=back_button("back_main"))

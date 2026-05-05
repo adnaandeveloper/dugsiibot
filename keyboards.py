@@ -6,7 +6,8 @@ def main_menu():
         [InlineKeyboardButton("➕ Tilføj kunde", callback_data="add_customer")],
         [InlineKeyboardButton("📋 Mine kunder", callback_data="list_customers")],
         [InlineKeyboardButton("📝 Ny lektion", callback_data="new_lesson")],
-        [InlineKeyboardButton("🔄 Nulstil ALLE saldi", callback_data="reset_all")], # NY
+        [InlineKeyboardButton("📊 Status denne måned", callback_data="status_month")],
+        [InlineKeyboardButton("🔄 Nulstil ALLE saldi", callback_data="reset_all")],
     ])
 
 def back_button(target="back_main"):
@@ -29,7 +30,7 @@ def customer_detail_keyboard(customer_id: int, months):
         btns.append([InlineKeyboardButton(f"{navn}: {net} kr", callback_data=f"month_{customer_id}_{ym}")])
     btns.append([
         InlineKeyboardButton("✏️ Rediger pris", callback_data=f"edit_{customer_id}"),
-        InlineKeyboardButton("🔄 Nulstil saldo", callback_data=f"reset_{customer_id}") # NY
+        InlineKeyboardButton("🔄 Nulstil saldo", callback_data=f"reset_{customer_id}")
     ])
     btns.append([InlineKeyboardButton("🗑 Slet kunde", callback_data=f"del_{customer_id}")])
     btns.append([InlineKeyboardButton("⬅️ Tilbage", callback_data="list_customers")])
@@ -41,4 +42,11 @@ def month_detail_keyboard(customer_id: int, ym: str):
          InlineKeyboardButton("✏️ Delbetaling", callback_data=f"paypart_{customer_id}_{ym}")],
         [InlineKeyboardButton("🏷 Rabat", callback_data=f"rabat_{customer_id}_{ym}")],
         [InlineKeyboardButton("⬅️ Tilbage", callback_data=f"cust_{customer_id}")]
+    ])
+
+def betalingsmetode_keyboard(action, cid, ym, belob=0):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("💵 Kontant", callback_data=f"met_{action}_{cid}_{ym}_{belob}_kontant"),
+         InlineKeyboardButton("🏦 Bank", callback_data=f"met_{action}_{cid}_{ym}_{belob}_bank")],
+        [InlineKeyboardButton("⬅️", callback_data=f"month_{cid}_{ym}")]
     ])

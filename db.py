@@ -8,39 +8,39 @@ def get_conn():
 def init_db():
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # Opret hvis ikke findes
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS customers(
+                CREATE TABLE IF NOT EXISTS customers (
                     id SERIAL PRIMARY KEY,
                     name TEXT NOT NULL,
-                    phone TEXT,
                     pricing_type TEXT DEFAULT 'hourly',
-                    hourly_rate INT DEFAULT 0,
-                    monthly_price INT DEFAULT 0,
+                    hourly_rate INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT now()
                 );
-                CREATE TABLE IF NOT EXISTS lessons(
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS lessons (
                     id SERIAL PRIMARY KEY,
-                    customer_id INT REFERENCES customers(id) ON DELETE CASCADE,
-                    amount INT NOT NULL,
-                    hours NUMERIC(3,1) DEFAULT 0,
+                    customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+                    hours REAL DEFAULT 1,
+                    amount INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT now(),
                     invoiced BOOLEAN DEFAULT false
                 );
-                CREATE TABLE IF NOT EXISTS payments(
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS payments (
                     id SERIAL PRIMARY KEY,
-                    customer_id INT REFERENCES customers(id) ON DELETE CASCADE,
-                    amount INT NOT NULL,
-                    status TEXT DEFAULT 'betalt',
+                    customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+                    amount INTEGER NOT NULL,
+                    status TEXT DEFAULT 'paid',
                     paid_at TIMESTAMP DEFAULT now()
                 );
             """)
-            # --- FIX gamle tabeller ---
-            cur.execute("ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP DEFAULT now();")
+            # migrations
+            cur.execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS hourly_rate INTEGER DEFAULT 0;")
             cur.execute("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT now();")
-            cur.execute("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS hours NUMERIC(3,1) DEFAULT 0;")
             cur.execute("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS invoiced BOOLEAN DEFAULT false;")
-            cur.execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS hourly_rate INT DEFAULT 0;")
-            cur.execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS monthly_price INT DEFAULT 0;")
-            cur.execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS pricing_type TEXT DEFAULT 'hourly';")
+            cur.execute("ALTER TABLE payments ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'paid';")
+            cur.execute("ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP DEFAULT now();")
+            cur.execute("ALTER TABLE payments ADD COLUMN IF NOT EXISTS method TEXT DEFAULT 'kontant';")
         conn.commit()
