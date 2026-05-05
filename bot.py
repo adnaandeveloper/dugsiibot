@@ -82,8 +82,11 @@ async def add_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     hourly = rate if ptype == "hourly" else 0
     monthly = rate if ptype == "monthly" else 0
     with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("INSERT INTO customers (name, phone, pricing_type, hourly_rate, monthly_price) VALUES (%s,%s,%s)",
-                    (context.user_data["name"], context.user_data["phone"], ptype, hourly, monthly))
+        # >>> FIX HER: 5 %s matcher 5 værdier <<<
+        cur.execute(
+            "INSERT INTO customers (name, phone, pricing_type, hourly_rate, monthly_price) VALUES (%s,%s,%s,%s,%s)",
+            (context.user_data["name"], context.user_data["phone"], ptype, hourly, monthly)
+        )
         conn.commit()
     await update.message.reply_text(f"Kunde {context.user_data['name']} oprettet som {ptype} ✅")
     return ConversationHandler.END
