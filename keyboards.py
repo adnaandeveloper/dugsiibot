@@ -7,11 +7,14 @@ def main_menu():
         [InlineKeyboardButton("📋 Mine kunder", callback_data="list_customers")],
         [InlineKeyboardButton("📝 Ny lektion", callback_data="new_lesson")],
         [InlineKeyboardButton("📊 Status denne måned", callback_data="status_month")],
+        [InlineKeyboardButton("🏫 Klasser", callback_data="classes_main")],
         [InlineKeyboardButton("🔄 Nulstil ALLE saldi", callback_data="reset_all")],
     ])
 
 def back_button(target="back_main"):
-    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Tilbage", callback_data=target)]])
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("⬅️ Tilbage", callback_data=target)]
+    ])
 
 def hours_keyboard(customer_id: int, rate: int):
     return InlineKeyboardMarkup([
@@ -51,7 +54,7 @@ def betalingsmetode_keyboard(action, cid, ym, belob=0):
         [InlineKeyboardButton("⬅️", callback_data=f"month_{cid}_{ym}")]
     ])
 
-    def classes_menu():
+def classes_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("➕ Ny klasse", callback_data="add_class")],
         [InlineKeyboardButton("📚 Mine klasser", callback_data="list_classes")],
@@ -59,7 +62,9 @@ def betalingsmetode_keyboard(action, cid, ym, belob=0):
     ])
 
 def class_list_keyboard(classes):
-    btns = [[InlineKeyboardButton(f"{c['name']} ({c['monthly_price']} kr)", callback_data=f"class_{c['id']}")] for c in classes]
+    btns = []
+    for c in classes:
+        btns.append([InlineKeyboardButton(f"{c['name']} ({c['monthly_price']} kr)", callback_data=f"class_{c['id']}")])
     btns.append([InlineKeyboardButton("⬅️", callback_data="classes_main")])
     return InlineKeyboardMarkup(btns)
 
