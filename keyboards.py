@@ -50,3 +50,24 @@ def betalingsmetode_keyboard(action, cid, ym, belob=0):
          InlineKeyboardButton("🏦 Bank", callback_data=f"met_{action}_{cid}_{ym}_{belob}_bank")],
         [InlineKeyboardButton("⬅️", callback_data=f"month_{cid}_{ym}")]
     ])
+
+    def classes_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("➕ Ny klasse", callback_data="add_class")],
+        [InlineKeyboardButton("📚 Mine klasser", callback_data="list_classes")],
+        [InlineKeyboardButton("⬅️", callback_data="back_main")]
+    ])
+
+def class_list_keyboard(classes):
+    btns = [[InlineKeyboardButton(f"{c['name']} ({c['monthly_price']} kr)", callback_data=f"class_{c['id']}")] for c in classes]
+    btns.append([InlineKeyboardButton("⬅️", callback_data="classes_main")])
+    return InlineKeyboardMarkup(btns)
+
+def class_detail_keyboard(cid):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("👤 Tilføj elev", callback_data=f"add_student_{cid}")],
+        [InlineKeyboardButton("✅ Kryds af betalt", callback_data=f"pay_class_{cid}")],
+        [InlineKeyboardButton("📊 Se manglende", callback_data=f"missing_{cid}")],
+        [InlineKeyboardButton("🗑 Slet klasse", callback_data=f"del_class_{cid}")],
+        [InlineKeyboardButton("⬅️", callback_data="list_classes")]
+    ])

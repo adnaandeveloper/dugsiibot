@@ -7,22 +7,16 @@ import datetime
 ADD_NAME, ADD_PRICE = range(2)
 
 async def add_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    await q.message.edit_text("Navn på kunde:")
-    return ADD_NAME
+    q = update.callback_query; await q.answer()
+    await q.message.edit_text("Navn på kunde:"); return ADD_NAME
 
 async def add_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text
-    await update.message.reply_text("Timepris i kr:")
-    return ADD_PRICE
+    await update.message.reply_text("Timepris i kr:"); return ADD_PRICE
 
 async def add_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        price = int(update.message.text)
-    except:
-        await update.message.reply_text("Kun tal")
-        return ADD_PRICE
+    try: price = int(update.message.text)
+    except: await update.message.reply_text("Kun tal"); return ADD_PRICE
     name = context.user_data["name"]
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -33,17 +27,13 @@ async def add_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 conv_add = ConversationHandler(
     entry_points=[CallbackQueryHandler(add_start, pattern="^add_customer$")],
-    states={
-        ADD_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_name)],
-        ADD_PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_price)],
-    },
-    fallbacks=[],
-    per_message=False
+    states={ADD_NAME:[MessageHandler(filters.TEXT & ~filters.COMMAND, add_name)],
+            ADD_PRICE:[MessageHandler(filters.TEXT & ~filters.COMMAND, add_price)]},
+    fallbacks=[], per_message=False
 )
 
 async def list_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+    q = update.callback_query; await q.answer()
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id, name FROM customers ORDER BY name")
@@ -53,8 +43,7 @@ async def list_customers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.message.edit_text("Vælg kunde:", reply_markup=InlineKeyboardMarkup(btns))
 
 async def show_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+    q = update.callback_query; await q.answer()
     cid = int(q.data.split("_")[1])
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -65,12 +54,7 @@ async def show_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE customer_id=%s", (cid,))
             paid = cur.fetchone()['coalesce'] or 0
             saldo = charged - paid
-            cur.execute("""
-                SELECT to_char(date_trunc('month', created_at),'YYYY-MM') ym,
-                       SUM(amount) as charged
-                FROM lessons WHERE customer_id=%s
-                GROUP BY ym ORDER BY ym DESC LIMIT 12
-            """, (cid,))
+            cur.execute("SELECT to_char(date_trunc('month', created_at),'YYYY-MM') ym, SUM(amount) as charged FROM lessons WHERE customer_id=%s GROUP BY ym ORDER BY ym DESC LIMIT 12", (cid,))
             months_raw = cur.fetchall()
             months = []
             for r in months_raw:
@@ -83,10 +67,8 @@ async def show_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.message.edit_text(text, reply_markup=customer_detail_keyboard(cid, months))
 
 async def month_detail(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    _, cid, ym = q.data.split("_")
-    cid = int(cid)
+    q = update.callback_query; await q.answer()
+    _, cid, ym = q.data.split("_"); cid = int(cid)
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT COALESCE(SUM(amount),0) FROM lessons WHERE customer_id=%s AND to_char(created_at,'YYYY-MM')=%s", (cid, ym))
@@ -94,14 +76,11 @@ async def month_detail(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE customer_id=%s AND to_char(paid_at,'YYYY-MM')=%s", (cid, ym))
             paid = cur.fetchone()['coalesce']
             rest = charged - paid
-    await q.message.edit_text(f"Måned {ym}\nFaktureret: {int(charged)} kr\nBetalt: {int(paid)} kr\nRest: {int(rest)} kr",
-                              reply_markup=month_detail_keyboard(cid, ym))
+    await q.message.edit_text(f"Måned {ym}\nFaktureret: {int(charged)} kr\nBetalt: {int(paid)} kr\nRest: {int(rest)} kr", reply_markup=month_detail_keyboard(cid, ym))
 
 async def pay_full(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    _, cid, ym = q.data.split("_")
-    cid = int(cid)
+    q = update.callback_query; await q.answer()
+    _, cid, ym = q.data.split("_"); cid = int(cid)
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT COALESCE(SUM(amount),0) FROM lessons WHERE customer_id=%s AND to_char(created_at,'YYYY-MM')=%s", (cid, ym))
@@ -109,12 +88,10 @@ async def pay_full(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE customer_id=%s AND to_char(paid_at,'YYYY-MM')=%s", (cid, ym))
             paid = cur.fetchone()['coalesce']
             rest = int(charged - paid)
-    await q.message.edit_text(f"Rest {rest} kr – vælg betaling:", 
-                              reply_markup=betalingsmetode_keyboard("full", cid, ym, rest))
+    await q.message.edit_text(f"Rest {rest} kr – vælg betaling:", reply_markup=betalingsmetode_keyboard("full", cid, ym, rest))
 
 async def pay_part_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+    q = update.callback_query; await q.answer()
     _, cid, ym = q.data.split("_")
     context.user_data["pay"] = {"cid": int(cid), "ym": ym}
     await q.message.edit_text("Skriv beløb der er betalt:")
@@ -123,37 +100,29 @@ async def pay_part_save(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = context.user_data.get("pay")
     if not data: return
     try: belob = int(update.message.text)
-    except:
-        await update.message.reply_text("Kun tal"); return
-    await update.message.reply_text(f"{belob} kr – vælg betaling:",
-        reply_markup=betalingsmetode_keyboard("part", data["cid"], data["ym"], belob))
+    except: await update.message.reply_text("Kun tal"); return
+    await update.message.reply_text(f"{belob} kr – vælg betaling:", reply_markup=betalingsmetode_keyboard("part", data["cid"], data["ym"], belob))
 
 async def save_payment_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+    q = update.callback_query; await q.answer()
     _, action, cid, ym, belob, method = q.data.split("_")
     cid, belob = int(cid), int(belob)
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("INSERT INTO payments (customer_id, amount, paid_at, method) VALUES (%s,%s,%s,%s)",
-                        (cid, belob, f"{ym}-28", method))
+            cur.execute("INSERT INTO payments (customer_id, amount, paid_at, method) VALUES (%s,%s,%s,%s)", (cid, belob, f"{ym}-28", method))
         conn.commit()
-    await q.message.edit_text(f"✅ {belob} kr ({method}) registreret for {ym}",
-                              reply_markup=month_detail_keyboard(cid, ym))
+    await q.message.edit_text(f"✅ {belob} kr ({method}) registreret for {ym}", reply_markup=month_detail_keyboard(cid, ym))
 
 async def delete_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+    q = update.callback_query; await q.answer()
     cid = int(q.data.split("_")[1])
     with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM customers WHERE id=%s", (cid,))
+        with conn.cursor() as cur: cur.execute("DELETE FROM customers WHERE id=%s", (cid,))
         conn.commit()
     await q.message.edit_text("Slettet", reply_markup=back_button("list_customers"))
 
 async def reset_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+    q = update.callback_query; await q.answer()
     cid = int(q.data.split("_")[1])
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -162,14 +131,12 @@ async def reset_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE customer_id=%s", (cid,))
             paid = cur.fetchone()['coalesce']
             saldo = charged - paid
-            if saldo!= 0:
-                cur.execute("INSERT INTO payments (customer_id, amount, paid_at, method) VALUES (%s,%s,now(),'kontant')", (cid, saldo))
+            if saldo!=0: cur.execute("INSERT INTO payments (customer_id, amount, paid_at, method) VALUES (%s,%s,now(),'kontant')", (cid, saldo))
         conn.commit()
-    await q.message.edit_text(f"✅ Saldo nulstillet ({int(saldo)} kr udlignet)", reply_markup=back_button(f"cust_{cid}"))
+    await q.message.edit_text(f"✅ Saldo nulstillet ({int(saldo)} kr)", reply_markup=back_button(f"cust_{cid}"))
 
 async def reset_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer("Nulstiller...")
+    q = update.callback_query; await q.answer("Nulstiller...")
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM customers")
@@ -180,32 +147,27 @@ async def reset_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE customer_id=%s", (cid,))
                 paid = cur.fetchone()['coalesce']
                 saldo = charged - paid
-                if saldo!= 0:
-                    cur.execute("INSERT INTO payments (customer_id, amount, paid_at, method) VALUES (%s,%s,now(),'kontant')", (cid, saldo))
+                if saldo!=0: cur.execute("INSERT INTO payments (customer_id, amount, paid_at, method) VALUES (%s,%s,now(),'kontant')", (cid, saldo))
         conn.commit()
     await q.message.edit_text("✅ Alle saldi nulstillet", reply_markup=back_button("back_main"))
 
 async def status_month(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
+    q = update.callback_query; await q.answer()
     now = datetime.datetime.now()
     this_ym = now.strftime("%Y-%m")
-    last_ym = (now.replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE to_char(paid_at,'YYYY-MM')=%s AND method='kontant'", (this_ym,))
             kontant = cur.fetchone()['coalesce']
             cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE to_char(paid_at,'YYYY-MM')=%s AND method='bank'", (this_ym,))
             bank = cur.fetchone()['coalesce']
-            cur.execute("SELECT COALESCE(SUM(amount),0) FROM lessons WHERE to_char(created_at,'YYYY-MM')=%s", (this_ym,))
-            fakt_this = cur.fetchone()['coalesce']
-            cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE to_char(paid_at,'YYYY-MM')=%s", (this_ym,))
-            paid_this = cur.fetchone()['coalesce']
-            kommende = fakt_this - paid_this
-            cur.execute("SELECT COALESCE(SUM(amount),0) FROM lessons WHERE to_char(created_at,'YYYY-MM')=%s", (last_ym,))
-            fakt_last = cur.fetchone()['coalesce']
-            cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE to_char(paid_at,'YYYY-MM')=%s", (last_ym,))
-            paid_last = cur.fetchone()['coalesce']
-            rest_last = fakt_last - paid_last
-    text = f"📊 Status {this_ym}\n\n💵 Kontant: {int(kontant)} kr\n🏦 Bank: {int(bank)} kr\n✅ Total betalt: {int(kontant+bank)} kr\n\n⏳ Kommende denne måned: {int(kommende)} kr\n📅 Rest fra {last_ym}: {int(rest_last)} kr"
+            cur.execute("SELECT c.name, c.monthly_price, COUNT(s.id) as elever FROM classes c LEFT JOIN class_students s ON s.class_id=c.id GROUP BY c.id")
+            klasser = cur.fetchall()
+            klasse_text = ""
+            for k in klasser:
+                cur.execute("SELECT COALESCE(SUM(amount),0) FROM class_payments WHERE class_id=%s AND month_ym=%s", (k['id'], this_ym))
+                betalt = cur.fetchone()['coalesce']
+                forventet = k['elever'] * k['monthly_price']
+                klasse_text += f"\n{k['name']}: {int(betalt)}/{int(forventet)} kr"
+    text = f"📊 Status {this_ym}\n\n💵 Kontant: {int(kontant)} kr\n🏦 Bank: {int(bank)} kr{klasse_text}"
     await q.message.edit_text(text, reply_markup=back_button("back_main"))
