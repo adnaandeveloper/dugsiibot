@@ -2,6 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, CallbackQueryHandler, filters
 from db import get_conn
 from keyboards import back_button, customer_detail_keyboard, month_detail_keyboard
+import datetime
 
 ADD_NAME, ADD_PRICE = range(2)
 
@@ -146,7 +147,7 @@ async def delete_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.commit()
     await q.message.edit_text("Slettet", reply_markup=back_button("list_customers"))
 
-    async def reset_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def reset_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     cid = int(q.data.split("_")[1])
@@ -178,4 +179,4 @@ async def reset_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if saldo!= 0:
                     cur.execute("INSERT INTO payments (customer_id, amount, paid_at) VALUES (%s,%s,now())", (cid, saldo))
         conn.commit()
-    await q.message.edit_text("✅ Alle saldi nulstillet", reply_markup=main_menu())
+    await q.message.edit_text("✅ Alle saldi nulstillet", reply_markup=back_button("back_main"))
