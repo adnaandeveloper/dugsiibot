@@ -145,3 +145,37 @@ async def delete_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cur.execute("DELETE FROM customers WHERE id=%s", (cid,))
         conn.commit()
     await q.message.edit_text("Slettet", reply_markup=back_button("list_customers"))
+
+    async def reset_customer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    cid = int(q.data.split("_")[1])
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(SUM(amount),0) FROM lessons WHERE customer_id=%s", (cid,))
+            charged = cur.fetchone()['coalesce']
+            cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE customer_id=%s", (cid,))
+            paid = cur.fetchone()['coalesce']
+            saldo = charged - paid
+            if saldo!= 0:
+                cur.execute("INSERT INTO payments (customer_id, amount, paid_at) VALUES (%s,%s,now())", (cid, saldo))
+        conn.commit()
+    await q.message.edit_text(f"✅ Saldo nulstillet ({int(saldo)} kr udlignet)", reply_markup=back_button(f"cust_{cid}"))
+
+async def reset_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer("Nulstiller...")
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM customers")
+            for cust in cur.fetchall():
+                cid = cust['id']
+                cur.execute("SELECT COALESCE(SUM(amount),0) FROM lessons WHERE customer_id=%s", (cid,))
+                charged = cur.fetchone()['coalesce']
+                cur.execute("SELECT COALESCE(SUM(amount),0) FROM payments WHERE customer_id=%s", (cid,))
+                paid = cur.fetchone()['coalesce']
+                saldo = charged - paid
+                if saldo!= 0:
+                    cur.execute("INSERT INTO payments (customer_id, amount, paid_at) VALUES (%s,%s,now())", (cid, saldo))
+        conn.commit()
+    await q.message.edit_text("✅ Alle saldi nulstillet", reply_markup=main_menu())

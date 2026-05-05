@@ -6,7 +6,7 @@ def main_menu():
         [InlineKeyboardButton("➕ Tilføj kunde", callback_data="add_customer")],
         [InlineKeyboardButton("📋 Mine kunder", callback_data="list_customers")],
         [InlineKeyboardButton("📝 Ny lektion", callback_data="new_lesson")],
-        [InlineKeyboardButton("📅 Månedsafslutning", callback_data="month_close")],
+        [InlineKeyboardButton("🔄 Nulstil ALLE saldi", callback_data="reset_all")], # NY
     ])
 
 def back_button(target="back_main"):
@@ -22,14 +22,16 @@ def hours_keyboard(customer_id: int, rate: int):
     ])
 
 def customer_detail_keyboard(customer_id: int, months):
-    # months = liste af (ym, net)
     btns = []
     for ym, net in months:
         dt = datetime.datetime.strptime(ym, "%Y-%m")
-        navn = dt.strftime("%b %Y") # fx May 2026
+        navn = dt.strftime("%b %Y")
         btns.append([InlineKeyboardButton(f"{navn}: {net} kr", callback_data=f"month_{customer_id}_{ym}")])
-    btns.append([InlineKeyboardButton("✏️ Rediger pris", callback_data=f"edit_{customer_id}"),
-                 InlineKeyboardButton("🗑 Slet kunde", callback_data=f"del_{customer_id}")])
+    btns.append([
+        InlineKeyboardButton("✏️ Rediger pris", callback_data=f"edit_{customer_id}"),
+        InlineKeyboardButton("🔄 Nulstil saldo", callback_data=f"reset_{customer_id}") # NY
+    ])
+    btns.append([InlineKeyboardButton("🗑 Slet kunde", callback_data=f"del_{customer_id}")])
     btns.append([InlineKeyboardButton("⬅️ Tilbage", callback_data="list_customers")])
     return InlineKeyboardMarkup(btns)
 

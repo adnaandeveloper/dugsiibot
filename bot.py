@@ -48,7 +48,10 @@ def main():
     app.add_handler(CallbackQueryHandler(lessons.new_lesson_start, pattern="^new_lesson$"))
     app.add_handler(CallbackQueryHandler(lessons.choose_customer, pattern="^lc_"))
     app.add_handler(CallbackQueryHandler(lessons.quick_hour, pattern="^lh_"))
-    app.add_handler(CallbackQueryHandler(lessons.month_close, pattern="^month_close$"))
+    app.add_handler(CallbackQueryHandler(customers.reset_customer, pattern="^reset_\\d+$"))
+    app.add_handler(CallbackQueryHandler(customers.reset_all, pattern="^reset_all$"))
+  
+
 
     # NYE: måneds-visning og betalinger
     app.add_handler(CallbackQueryHandler(customers.month_detail, pattern="^month_"))
