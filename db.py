@@ -8,6 +8,7 @@ def get_conn():
 def init_db():
     with get_conn() as conn:
         with conn.cursor() as cur:
+            # Opret hvis ikke findes
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS customers(
                     id SERIAL PRIMARY KEY,
@@ -34,10 +35,12 @@ def init_db():
                     paid_at TIMESTAMP DEFAULT now()
                 );
             """)
-            # FIX gamle tabeller
+            # --- FIX gamle tabeller ---
             cur.execute("ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP DEFAULT now();")
-            cur.execute("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS invoiced BOOLEAN DEFAULT false;")
+            cur.execute("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT now();")
             cur.execute("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS hours NUMERIC(3,1) DEFAULT 0;")
+            cur.execute("ALTER TABLE lessons ADD COLUMN IF NOT EXISTS invoiced BOOLEAN DEFAULT false;")
             cur.execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS hourly_rate INT DEFAULT 0;")
             cur.execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS monthly_price INT DEFAULT 0;")
+            cur.execute("ALTER TABLE customers ADD COLUMN IF NOT EXISTS pricing_type TEXT DEFAULT 'hourly';")
         conn.commit()
