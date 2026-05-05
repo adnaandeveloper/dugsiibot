@@ -1,41 +1,53 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+import logging
+from telegram import Update
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler
 
-def main_menu():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("➕ Tilføj kunde", callback_data="add_customer")],
-        [InlineKeyboardButton("📋 Mine kunder", callback_data="list_customers")],
-        [InlineKeyboardButton("📝 Ny lektion", callback_data="new_lesson")],
-        [InlineKeyboardButton("📅 Månedsafslutning", callback_data="month_close")],
-    ])
+from config import TOKEN, ALLOWED_USERS
+from db import init_db
+from keyboards import main_menu, back_button
+from handlers import customers, lessons
 
-def back_button(target="back_main"):
-    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Tilbage", callback_data=target)]])
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 
-def hours_keyboard(customer_id: int, rate: int):
-    """Bruges når du vælger en time-kunde – 1 klik = gemt"""
-    return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(f"0.5t ({int(rate*0.5)} kr)", callback_data=f"lh_{customer_id}_0.5"),
-            InlineKeyboardButton(f"1t ({rate} kr)", callback_data=f"lh_{customer_id}_1")
-        ],
-        [
-            InlineKeyboardButton(f"1.5t ({int(rate*1.5)} kr)", callback_data=f"lh_{customer_id}_1.5"),
-            InlineKeyboardButton(f"2t ({rate*2} kr)", callback_data=f"lh_{customer_id}_2")
-        ],
-        [InlineKeyboardButton("⬅️", callback_data="new_lesson")]
-    ])
+async def restricted(update: Update):
+    if update.effective_user.id not in ALLOWED_USERS:
+        await update.effective_message.reply_text("🚫 Ingen adgang")
+        return False
+    return True
 
-def customer_detail_keyboard(customer_id: int):
-    """Bruges på 'Mine kunder' detaljeside"""
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✏️ Rediger pris", callback_data=f"edit_{customer_id}"),
-         InlineKeyboardButton("💰 Marker betalt", callback_data=f"pay_{customer_id}")],
-        [InlineKeyboardButton("🗑 Slet kunde", callback_data=f"del_{customer_id}")],
-        [InlineKeyboardButton("⬅️ Tilbage", callback_data="list_customers")]
-    ])
+async def start(update: Update, context):
+    if not await restricted(update): return
+    await update.message.reply_text("DarulQuranBot v3", reply_markup=main_menu())
 
-def confirm_delete_keyboard(customer_id: int):
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Ja, slet", callback_data=f"del_yes_{customer_id}"),
-         InlineKeyboardButton("❌ Annuller", callback_data=f"cust_{customer_id}")]
-    ])
+async def back_main(update: Update, context):
+    q = update.callback_query
+    await q.answer()
+    await q.message.edit_text("Vælg:", reply_markup=main_menu())
+
+def main():
+    init_db()
+    app = Application.builder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(back_main, pattern="^back_main$"))
+
+    # Kunder
+    app.add_handler(customers.conv_add)
+    app.add_handler(CallbackQueryHandler(customers.list_customers, pattern="^list_customers$"))
+    app.add_handler(CallbackQueryHandler(customers.show_customer, pattern="^cust_"))
+    app.add_handler(CallbackQueryHandler(customers.delete_customer, pattern="^del_"))
+
+    # Lektioner
+    app.add_handler(CallbackQueryHandler(lessons.new_lesson_start, pattern="^new_lesson$"))
+    app.add_handler(CallbackQueryHandler(lessons.choose_customer, pattern="^lc_"))
+    app.add_handler(CallbackQueryHandler(lessons.quick_hour, pattern="^lh_"))
+    app.add_handler(CallbackQueryHandler(lessons.month_close, pattern="^month_close$"))
+
+    logging.info("Bot v3 kører...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
